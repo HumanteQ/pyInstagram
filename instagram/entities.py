@@ -96,8 +96,8 @@ class Media(UpdatableElement):
     entry_data_path = ("PostPage", 0, "graphql", "shortcode_media")
     base_url = "p/"
 
-    def __init__(self, code):
-        self.id = None
+    def __init__(self, code, id=None, display_url=None, is_video=None, video_url=None):
+        self.id = id
         self.code = code
         self.caption = None
         self.owner = None
@@ -106,10 +106,10 @@ class Media(UpdatableElement):
         self.likes_count = None
         self.comments_count = None
         self.comments_disabled = None
-        self.is_video = None
-        self.video_url = None
+        self.is_video = is_video
+        self.video_url = video_url
         self.is_ad = None
-        self.display_url = None
+        self.display_url = display_url
         self.resources = None
         self.is_album = None
 
@@ -150,7 +150,13 @@ class Media(UpdatableElement):
         if "edge_sidecar_to_children" in data:
             for edge in data["edge_sidecar_to_children"]["edges"]:
                 if edge["node"].get("shortcode", self.code) != self.code:
-                    self.album.add(Media(edge["node"]["shortcode"]))
+                    self.album.add(Media(
+                        edge["node"]["shortcode"],
+                        id=edge["node"]["id"],
+                        display_url=edge["node"]["display_url"],
+                        is_video=edge["node"]["is_video"],
+                        video_url=edge["node"].get("video_url", None),
+                    ))
 
 
 class Story(Element):
