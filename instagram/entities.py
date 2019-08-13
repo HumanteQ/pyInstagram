@@ -33,7 +33,7 @@ class Element(metaclass=ElementConstructor):
 class UpdatableElement(Element):
     def set_data(self):
         raise NotImplementedError
-    
+
     def entry_data_path(self):
         raise NotImplementedError
 
@@ -44,10 +44,9 @@ class UpdatableElement(Element):
 class HasMediaElement(UpdatableElement):
     def media_path(self):
         raise NotImplementedError
-    
+
     def media_query_hash(self):
         raise NotImplementedError
-
 
 
 class Account(HasMediaElement):
@@ -222,9 +221,13 @@ class Tag(HasMediaElement):
 class Comment(Element):
     primary_key = "id"
 
-    def __init__(self, id, media, owner, text, created_at):
+    def __init__(self, id, media=None, owner=None, text=None, created_at=None, likesCount=None, isThread=False,
+                 parent=None):
         self.id = id
         self.media = media
         self.owner = owner
         self.text = text
         self.created_at = created_at
+        self.likesCount = likesCount
+        self.isThread = isThread
+        self.parent = parent

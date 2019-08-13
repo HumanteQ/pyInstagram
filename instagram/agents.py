@@ -269,22 +269,30 @@ class WebAgent:
                     data = data["edge_media_to_comment"]
                 else:
                     data = data["edge_media_to_parent_comment"]
+                    for edge in data["edges"]:
+                        edgeThreadedComments = edge['node'].get('edge_threaded_comments')
+                        if edgeThreadedComments and edgeThreadedComments["count"]:
+                            data["edges"] += edgeThreadedComments["edges"]
                 edges = data["edges"]
                 page_info = data["page_info"]
-                
+
                 for index in range(min(len(edges), count)):
                     node = edges[index]["node"]
-                    c = Comment(node["id"], media=media,
+                    c = Comment(node["id"],
+                                media=media,
                                 owner=Account(node["owner"]["username"]),
                                 text=node["text"],
-                                created_at=node["created_at"])
+                                created_at=node["created_at"],
+                                likesCount=node["edge_liked_by"]["count"],)
                     media.comments.add(c)
                     comments.append(c)
 
                 pointer = page_info["end_cursor"] if page_info["has_next_page"] else None
 
+                self.logger.info(f"Edges in response {len(edges)}, count {count}")
                 if len(edges) < count and not pointer is None:
                     count = count-len(edges)
+                    sleep(delay)
                 else:
                     if not self.logger is None:
                         self.logger.info("Get comments '%s' was successfull", media)
@@ -314,22 +322,28 @@ class WebAgent:
 
             try:
                 data = response.json()["data"]["shortcode_media"]["edge_media_to_comment"]
+                for edge in data["edges"]:
+                    edgeThreadedComments = edge['node'].get('edge_threaded_comments')
+                    if edgeThreadedComments and edgeThreadedComments["count"]:
+                        data["edges"] += edgeThreadedComments["edges"]
                 media.comments_count = data["count"]
                 edges = data["edges"]
                 page_info = data["page_info"]
-                
+
                 for index in range(min(len(edges), count)):
                     node = edges[index]["node"]
                     c = Comment(node["id"],
                                 media=media,
                                 owner=Account(node["owner"]["username"]),
                                 text=node["text"],
-                                created_at=node["created_at"])
+                                created_at=node["created_at"],
+                                likesCount=node["edge_liked_by"]["count"],)
                     media.comments.add(c)
                     comments.append(c)
-                
+
                 pointer = page_info["end_cursor"] if page_info["has_next_page"] else None
 
+                self.logger.info(f"Edges {len(edges)} in response, count {count}")
                 if len(edges) < count and page_info["has_next_page"]:
                     count = count - len(edges)
                     sleep(delay)
@@ -356,7 +370,7 @@ class WebAgent:
         settings = dict() if settings is None else settings.copy()
 
         if not "params" in settings:
-            settings["params"] = dict() 
+            settings["params"] = dict()
         settings["params"].update({"query_hash": query_hash})
 
         settings["params"]["variables"] = variables
@@ -762,7 +776,7 @@ class AsyncWebAgent:
         settings = dict() if settings is None else settings.copy()
 
         if not "params" in settings:
-            settings["params"] = dict() 
+            settings["params"] = dict()
         settings["params"].update({"query_hash": query_hash})
 
         settings["params"]["variables"] = variables
@@ -1047,7 +1061,7 @@ class WebAgentAccount(Account, WebAgent):
                 referer="https://instagram.com/%s%s" % (
                     account.base_url,
                     getattr(account, account.primary_key),
-                ), 
+                ),
                 settings=settings,
             )
 
@@ -1486,7 +1500,7 @@ class AsyncWebAgentAccount(Account, AsyncWebAgent):
     def __del__(self):
         Account.__del__(self)
 
-    async def delete(self):    
+    async def delete(self):
         await self.session.close()
 
     async def auth(self, password, settings=None):
@@ -1538,7 +1552,7 @@ class AsyncWebAgentAccount(Account, AsyncWebAgent):
                 self.logger.error("Auth was unsuccessfully: %s", str(exception))
             raise UnexpectedResponse(exception, response.url)
         if not self.logger is None:
-            self.logger.info("Auth was successfully")       
+            self.logger.info("Auth was successfully")
 
     @exception_manager.decorator
     async def checkpoint_handle(self, url, settings=None):
@@ -1909,7 +1923,7 @@ class AsyncWebAgentAccount(Account, AsyncWebAgent):
             self.logger.info("Like '%s' started", media)
         if not isinstance(media, Media):
             raise TypeError("'media' must be Media type")
-        
+
         if media.id is None:
             await self.update(media, settings=settings)
 
